@@ -1,0 +1,33 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: linebot-backend
+    volumes:
+      - ./app:/app
+    environment:
+      - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
+      - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+    ports:
+      - "8000:8000"
+    networks:
+      - bot-network
+
+  ngrok:
+    image: ngrok/ngrok:3
+    container_name: linebot-ngrok
+    restart: always
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    command:
+      - "http"
+      - "backend:8000"
+    networks:
+      - bot-network
+    depends_on:
+      - backend
+
+networks:
+  bot-network:
+    driver: bridge

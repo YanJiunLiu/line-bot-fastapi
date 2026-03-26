@@ -1,4 +1,6 @@
 .env
 __pycache__
 313/
+.DS_Store
+__pycache__
 
