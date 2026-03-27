@@ -9,6 +9,8 @@ services:
     environment:
       - LINE_CHANNEL_ACCESS_TOKEN=${LINE_CHANNEL_ACCESS_TOKEN}
       - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
+      - LOG_DIR=${LOG_DIR}
+      - DB_DIR=${DB_DIR}
     ports:
       - "8000:8000"
     networks:
@@ -18,6 +20,8 @@ services:
     image: ngrok/ngrok:3
     container_name: linebot-ngrok
     restart: always
+    ports:
+      - "4040:4040"
     environment:
       - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
     command:
@@ -27,6 +31,18 @@ services:
       - bot-network
     depends_on:
       - backend
+
+  ollama:
+    image: ollama/ollama:0.18.3
+    container_name: linebot-ollama
+    restart: always
+    ports:
+      - "11434:11434"
+    volumes:
+      #- /root/.ollama:/root/.ollama # 在linux 環境下使用
+      - ./ollama:/root/.ollama # 在mac 環境下使用
+    networks:
+      - bot-network
 
 networks:
   bot-network:
