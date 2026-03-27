@@ -49,32 +49,28 @@ async def callback(request: Request, x_line_signature: str = Header(None)):
         raise HTTPException(status_code=400, detail="Invalid signature")
     return "OK"
 
-# --- 1. 處理加入群組事件 ---
-@handler.add(JoinEvent)
-def handle_join(event):
-    welcome_msg = "我愛我的媽咪～"
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=welcome_msg))
 
-# --- 2. 處理訊息事件 (含鎖定邏輯) ---
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
     
     if event.source.type != 'group':
         return
-    
+
+    group_id = event.source.group_id
+    user_id = event.source.user_id
+    user_text = event.message.text.strip()
+    keywords = ["熊寶", "寶貝", "鼻熊熊"]
+
+    if not any(keyword in user_text for keyword in keywords):
+        return
+
     async def logic(event):
-        group_id = event.source.group_id
-        user_id = event.source.user_id
         logger.info(f"user_id: {user_id}")
-        user_text = event.message.text.strip()
-        
         line_bot_api.reply_message(
             event.reply_token, 
             TextSendMessage(text=_get_waiting_msg(user_id))
         )
-        
         result = await finance_analyzer.chat(user_id, user_text)
-
         line_bot_api.push_message(
             group_id, 
             TextSendMessage(text=f"{result}")

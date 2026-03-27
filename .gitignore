@@ -7,3 +7,6 @@ db/
 logs/
 ollama/
 
+redis_data/
+
+

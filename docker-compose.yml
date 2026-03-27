@@ -44,10 +44,17 @@ services:
     ports:
       - "11434:11434"
     volumes:
-      #- /root/.ollama:/root/.ollama # 在linux 環境下使用
-      - ./ollama:/root/.ollama # 在mac 環境下使用
+      - /root/.ollama:/root/.ollama # 在linux 環境下使用
+      #- ./ollama:/root/.ollama # 在mac 環境下使用
     networks:
       - bot-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
 
   redis:
     image: redis:7-alpine
