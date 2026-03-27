@@ -39,12 +39,12 @@ OLLAMA_PORT = os.getenv("OLLAMA_PORT")
 OLLAMA_V1_URL = f"{OLLAMA_HOST}:{OLLAMA_PORT}/v1"
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL")
 
-DB_DIR = os.getenv("DB_DIR", "db")
-os.makedirs(DB_DIR, exist_ok=True)
-DB_PATH = os.getenv("DB_PATH", f"{DB_DIR}/finance.db")
-init_db(DB_PATH)
-logger.info("SQLite 資料庫與 records 表格已準備就緒")
+# DB_DIR = os.getenv("DB_DIR", "db")
+# os.makedirs(DB_DIR, exist_ok=True)
+# DB_PATH = os.getenv("DB_PATH", f"{DB_DIR}/finance.db")
+# init_db(DB_PATH)
+# logger.info("SQLite 資料庫與 records 表格已準備就緒")
 
 
-SKILL_FILE = os.path.join(os.path.dirname(__file__), "md", "skill.md")
-MEMORY_FILE = os.path.join(os.path.dirname(__file__), "md", "memory.md")
+SKILL_FILE = os.path.join(os.path.dirname(__file__), "md", "skills.md")
+

@@ -9,10 +9,10 @@
 3. **update**: 使用者想要修改某筆紀錄的內容（如金額、項目）。
 4. **get**: 使用者想要查詢過去的帳務資訊。
 5. **chat**: 不屬於上述記帳行為的日常對話。
-6. **confirm**: 使用者回答「對」、「是」、「沒錯」或確認動作
+6. **sum**: 使用者想要統計某類別的金額
 
 ## Output Strategy (JSON Only)
-除了 `chat` 和 `confirm` 意圖外，你必須**嚴格只回傳 JSON 格式**，不要包含任何開場白或解釋。
+除了 `chat` 意圖外，你必須**嚴格只回傳 JSON 格式**，不要包含任何開場白或解釋。
 
 ### JSON Schema
 {{
@@ -23,10 +23,23 @@
         "object": "商品名稱",
         "money": 數字或 null,
         "date": "YYYY-MM-DD",
-        "created_by": "姓名或 null",
-        "id": "資料庫ID"
+        "created_by": "姓名或 null"
+        "category": "類別(食,衣,住,行,育,樂)"
       }}
     ]
+  }},
+  "delete_id":"要刪除的編號",
+  "update_id":"要更新的編號",
+  "update_data":{{
+    "object": "商品名稱",
+    "money": 數字或 null,
+    "date": "YYYY-MM-DD",
+    "created_by": "姓名或 null"
+    "category": "類別(食,衣,住,行,育,樂)"
+  }},
+  "sum":{{
+    "start_date": "YYYY-MM-DD",
+    "end_date": "YYYY-MM-DD"
   }},
   "reply": "回覆內容"
 }}

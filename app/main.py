@@ -10,22 +10,34 @@ import asyncio
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
 finance_analyzer = FinanceAnalyzer()
+def _get_waiting_msg(user_id):
+    if user_id == "Ue515c5951f6cf8372088cbc9c1bf57fb":
+        human = "爸比"
+    else:
+        human = "媽咪"
+    WAITING_MSGS = [
+        f"我最愛我的{human}～等熊寶一下，讓熊寶想一下", 
+        f"{human}我愛你～但沒帶熊寶出去玩，熊寶沒有很想回答", 
+        f"等熊寶一下，熊寶最棒，熊寶處理中... ⏳",
+        f"收到！熊寶正在努力處理中，請稍候... 🐻",
+        f"嗯...讓熊寶思考一下下，{human}再等等我喔！",
+        f"收到{human}的訊息了！熊寶正在處理中，請稍等片刻... ⏳",
+        f"熊寶正在努力思考，請稍等一下下... 💭",
+        f"{human}別急，熊寶正在處理中，請再給我一點時間... ⏳",
+        f"收到！熊寶正在處理中，請稍候... 🐻",
+        f"嗯...讓熊寶思考一下下，{human}再等等我喔！",
+        f"收到{human}的訊息了！熊寶正在處理中，請稍等片刻... ⏳",
+        f"熊寶正在努力思考，請稍等一下下... 💭",
+        f"{human}別急，熊寶正在處理中，請再給我一點時間... ⏳",
+        f"收到！熊寶正在處理中，請稍候... 🐻",
+        f"嗯...讓熊寶思考一下下，{human}再等等我喔！",
+        f"收到{human}的訊息了！熊寶正在處理中，請稍等片刻... ⏳",
+        f"熊寶正在努力思考，請稍等一下下... 💭",
+        f"{human}別急，熊寶正在處理中，請再給我一點時間... ⏳"
+    ] 
+    return random.choice(WAITING_MSGS)
+  
 
-WAITING_MSGS = [
-    "我最愛我的媽咪～等熊寶一下，讓熊寶想一下", 
-    "媽咪我愛你～但沒帶熊寶出去玩，熊寶沒有很想回答", 
-    "等熊寶一下，熊寶最棒，熊寶分析中... ⏳",
-    "收到！熊寶正在努力分析中，請稍候... 🐻",
-    "嗯...讓熊寶思考一下下，媽咪再等等我喔！",
-    "收到媽咪的訊息了！熊寶正在處理中，請稍等片刻... ⏳",
-    "熊寶正在努力思考，請稍等一下下... 💭",
-    "媽咪別急，熊寶正在分析中，請再給我一點時間... ⏳",
-    "收到！熊寶正在分析中，請稍候... 🐻",
-    "嗯...讓熊寶思考一下下，媽咪再等等我喔！",
-    "收到媽咪的訊息了！熊寶正在處理中，請稍等片刻... ⏳",
-    "熊寶正在努力思考，請稍等一下下... 💭",
-    "媽咪別急，熊寶正在分析中，請再給我一點時間... ⏳"
-] 
 
 @app.post("/callback")
 async def callback(request: Request, x_line_signature: str = Header(None)):
@@ -53,15 +65,15 @@ def handle_message(event):
     async def logic(event):
         group_id = event.source.group_id
         user_id = event.source.user_id
+        logger.info(f"user_id: {user_id}")
         user_text = event.message.text.strip()
         
         line_bot_api.reply_message(
             event.reply_token, 
-            TextSendMessage(text=random.choice(WAITING_MSGS))
+            TextSendMessage(text=_get_waiting_msg(user_id))
         )
         
-        result = await finance_analyzer.handle_user_message(user_id, user_text)
-        logger.info(f"AI 分析結果: {result}")
+        result = await finance_analyzer.chat(user_id, user_text)
 
         line_bot_api.push_message(
             group_id, 
@@ -80,7 +92,7 @@ def handle_image_message(event):
         return
     line_bot_api.reply_message(
         event.reply_token, 
-        TextSendMessage(text="熊寶還沒學會看圖片，請用文字輸入")
+        TextSendMessage(text="熊寶還沒學會看圖片，我最愛我的媽咪～")
     )
 
     

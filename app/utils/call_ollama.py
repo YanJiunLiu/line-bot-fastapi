@@ -6,6 +6,8 @@ from langchain_core.messages import SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
 from datetime import datetime
 import json
+import uuid
+from collections import defaultdict
 
 CURRENT_DATE = datetime.now().strftime("%Y-%m-%d")
 
@@ -30,14 +32,32 @@ class FinanceAnalyzer:
             settings.logger.warning(f"找不到檔案: {filename}, 將不使用該檔案的內容")
             return ""
 
-    async def chat(self, user_input: str, history: list[str]=[]):
+    async def preproccess(self, user_input: str):
+        prompt = ChatPromptTemplate.from_messages([
+            ("system", self.skills),
+            ("human", "{input}")
+        ])
 
+        chain = prompt | self.llm | self.parser
+        
+        try:
+            result = await chain.ainvoke({
+                "today": CURRENT_DATE,
+                "input": user_input
+            })
+            settings.logger.info(f"模型解析結果: {result}")
+            return result
+        except Exception as e:
+            settings.logger.error(f"模型解析失敗: {e}")
+            return {"intent": "chat", "reply": "抱歉，我現在有點混亂，請再說一次。"}
+
+    async def execute(self, user_input: str, history: list[str]=[]):
         formatted_history = []
         for msg in history:
             if msg.strip(): # 避免空白字串
                 formatted_history.append(SystemMessage(content=f"歷史紀錄: {msg}"))
         prompt = ChatPromptTemplate.from_messages([
-            ("system", self.skills),
+            ("system", "你是一位處理資料的專家，請根據歷史紀錄和使用者的需求，修改歷史紀錄，並回覆使用者"),
             ("placeholder", "{history}"),
             ("human", "{input}")
         ])
@@ -115,5 +135,103 @@ class FinanceAnalyzer:
             return result['reply']
     
     
+    async def chat(self, user_id, user_text):
+        preproccess = await self.preproccess(user_text)
+        settings.logger.info(f"preproccess {preproccess}")
+        user_hash_key = f"user:{user_id}:records"
+        if preproccess['intent'] == "create":
+            msg = "好的，這是我幫您記錄的資訊：\n"
+            mapping = {}
+            for record in preproccess['data']['records']:
+                if user_id == "Ue515c5951f6cf8372088cbc9c1bf57fb":
+                    record['created_by'] = "爸比"
+                else:
+                    record['created_by'] = "媽咪"
+                msg += (
+                    "--------------------------------\n"
+                    f"🔹 項目：{record.get('object')}\n"
+                    f"🔹 金額：{record.get('money')}\n"
+                    f"🔹 日期：{record.get('date')}\n"
+                    f"🔹 購買人：{record.get('created_by')}\n"
+                    "--------------------------------\n"
+                )
+                record_id = str(uuid.uuid4())[:8]
+                record['id'] = record_id
+                mapping[record_id] = json.dumps(record, ensure_ascii=False)
+            if mapping:
+                self.redis_client.hset(user_hash_key, mapping=mapping)
+            return msg
 
+        elif preproccess['intent'] == "delete":
+            self.redis_client.hdel(user_hash_key, preproccess['delete_id'])
+            return f"熊寶最棒，已刪除編號:{preproccess['delete_id']}"
+            
+        elif preproccess['intent'] == "update":
+            raw_data = self.redis_client.hget(user_hash_key, preproccess['update_id'])
+            if not raw_data:
+                return "熊寶找不到該紀錄"
+            record = json.loads(raw_data.encode('utf-8'))
+            record.update(preproccess['update_data'])
+            self.redis_client.hset(user_hash_key, preproccess['update_id'], json.dumps(record, ensure_ascii=False))
+            return f"熊寶最棒，已更新編號:{preproccess}"
+            
+        elif preproccess['intent'] == "get":
+            all_data = self.redis_client.hgetall(user_hash_key)
+            records = [json.loads(v.encode('utf-8')) for v in all_data.values()]
+            msg = "熊寶最棒，這是我幫您查詢的資訊：\n"
+            for record in records:
+                msg += (
+                    "--------------------------------\n"
+                    f"🔹 項目：{record.get('object')}\n"
+                    f"🔹 金額：{record.get('money')}\n"
+                    f"🔹 日期：{record.get('date')}\n"
+                    f"🔹 購買人：{record.get('created_by')}\n"
+                    f"🔹 分類：{record.get('category')}\n"
+                    f"🔹 編號：{record.get('id')}\n"
+                    "--------------------------------\n"
+                )
+            return msg
+            
+        elif preproccess['intent'] == "sum":
+            all_records_raw = self.redis_client.hgetall(user_hash_key)
+    
+            if not all_records_raw:
+                return "🐻 找不到任何紀錄呢！"
+
+            total_sum = 0
+            match_count = 0
+            start_date = preproccess['sum'].get('start_date', '1999-01-01')
+            end_date = preproccess['sum'].get('end_date', '2099-12-31')
+            details = []
+
+            for record_json in all_records_raw.values():
+                record = json.loads(record_json.encode('utf-8'))
+                r_date = record.get('date', '') # 格式：2026-03-10
+                
+                if start_date <= r_date <= end_date:
+                    amount = record.get('money', 0) or 0
+                    total_sum += amount
+                    match_count += 1
+                    details.append(f"· {r_date} {record.get('object')} ${amount}")
+
+            if match_count == 0:
+                return f"📍 在 {start_date} 到 {end_date} 之間沒有消費紀錄喔！"
+
+            msg = f"🗓️ 【區間統計報告】\n"
+            msg += f"期間：{start_date} ➡️ {end_date}\n"
+            msg += "--------------------------------\n"
+            
+            # 只列出前 10 筆明細，避免訊息過長
+            msg += "\n".join(details[:10])
+            if len(details) > 10:
+                msg += f"\n...等共 {len(details)} 筆紀錄"
+                
+            msg += "\n--------------------------------\n"
+            msg += f"💰 區間總計：${total_sum:,.0f}"
+            
+            return msg
+            
+        else:
+            return preproccess['reply']
+            
 
