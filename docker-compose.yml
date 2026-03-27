@@ -11,6 +11,11 @@ services:
       - LINE_CHANNEL_SECRET=${LINE_CHANNEL_SECRET}
       - LOG_DIR=${LOG_DIR}
       - DB_DIR=${DB_DIR}
+      - OLLAMA_HOST=${OLLAMA_HOST}
+      - OLLAMA_PORT=${OLLAMA_PORT}
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
     ports:
       - "8000:8000"
     networks:
@@ -41,6 +46,17 @@ services:
     volumes:
       #- /root/.ollama:/root/.ollama # 在linux 環境下使用
       - ./ollama:/root/.ollama # 在mac 環境下使用
+    networks:
+      - bot-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: linebot-redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - ./redis_data:/data
     networks:
       - bot-network
 

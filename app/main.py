@@ -1,14 +1,31 @@
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-# 這裡新增了 JoinEvent
 from linebot.models import MessageEvent, TextMessage, TextSendMessage, JoinEvent, ImageMessage
 from fastapi import Request, Header, HTTPException
 from config.settings import app, LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET, logger
+from utils.call_ollama import FinanceAnalyzer
+import random
+import asyncio
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
+finance_analyzer = FinanceAnalyzer()
 
-group_db = {}
+WAITING_MSGS = [
+    "我最愛我的媽咪～等熊寶一下，讓熊寶想一下", 
+    "媽咪我愛你～但沒帶熊寶出去玩，熊寶沒有很想回答", 
+    "等熊寶一下，熊寶最棒，熊寶分析中... ⏳",
+    "收到！熊寶正在努力分析中，請稍候... 🐻",
+    "嗯...讓熊寶思考一下下，媽咪再等等我喔！",
+    "收到媽咪的訊息了！熊寶正在處理中，請稍等片刻... ⏳",
+    "熊寶正在努力思考，請稍等一下下... 💭",
+    "媽咪別急，熊寶正在分析中，請再給我一點時間... ⏳",
+    "收到！熊寶正在分析中，請稍候... 🐻",
+    "嗯...讓熊寶思考一下下，媽咪再等等我喔！",
+    "收到媽咪的訊息了！熊寶正在處理中，請稍等片刻... ⏳",
+    "熊寶正在努力思考，請稍等一下下... 💭",
+    "媽咪別急，熊寶正在分析中，請再給我一點時間... ⏳"
+] 
 
 @app.post("/callback")
 async def callback(request: Request, x_line_signature: str = Header(None)):
@@ -29,59 +46,41 @@ def handle_join(event):
 # --- 2. 處理訊息事件 (含鎖定邏輯) ---
 @handler.add(MessageEvent, message=TextMessage)
 def handle_message(event):
+    
     if event.source.type != 'group':
         return
-    logger.info(f"event: {event}")
-    group_id = event.source.group_id
-    user_text = event.message.text.strip()
-    logger.info(f"user_text: {user_text}")
-
-    current_config = group_db.get(group_id, {"status": "pending"})
     
-    if current_config["status"] == "pending":
-        if user_text.startswith("設定"):
-            project_name = user_text[2:].strip()
-            if not project_name:
-                reply = "請輸入有效的專案名稱。\n範例：設定 秘密專案"
-            else:
-                group_db[group_id] = {"status": "active", "project_name": project_name}
-                reply = f"設定成功！\n專案：{project_name}\n現在您可以開始使用「查詢」功能了。"
-        else:
-            reply = "請先完成設定才能開始使用。\n請輸入：設定 [專案名稱]"
-    
-    else:
-        if user_text.startswith("查詢"):
-            keyword = user_text[2:].strip()
-            project = current_config["project_name"]
-            reply = f"🔍 正在專案【{project}】中搜尋：{keyword}"
-        else:
-            return 
+    async def logic(event):
+        group_id = event.source.group_id
+        user_id = event.source.user_id
+        user_text = event.message.text.strip()
+        
+        line_bot_api.reply_message(
+            event.reply_token, 
+            TextSendMessage(text=random.choice(WAITING_MSGS))
+        )
+        
+        result = await finance_analyzer.handle_user_message(user_id, user_text)
+        logger.info(f"AI 分析結果: {result}")
 
-    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply))
+        line_bot_api.push_message(
+            group_id, 
+            TextSendMessage(text=f"{result}")
+        )
+    loop = asyncio.get_event_loop()
+    loop.create_task(logic(event))
+
 
 
 
 @handler.add(MessageEvent, message=ImageMessage)
 def handle_image_message(event):
+
     if event.source.type != 'group':
         return
-    # 1. 取得訊息 ID
-    message_id = event.message.id
-    logger.info(f"收到圖片訊息，ID: {message_id}")
-
-    # 2. 向 LINE 請求圖片內容
-    message_content = line_bot_api.get_message_content(message_id)
-    
-    # 3. 將內容讀取為二進位格式 (bytes)
-    image_bytes = b""
-    for chunk in message_content.iter_content():
-        image_bytes += chunk
-    
-    # 現在 image_bytes 就是圖片的原始資料了！
-    logger.info(f"成功取得圖片，大小: {len(image_bytes)} bytes")
-
-    # 回覆使用者
     line_bot_api.reply_message(
         event.reply_token, 
-        TextSendMessage(text=f"收到圖片，正在分析中...")
+        TextSendMessage(text="熊寶還沒學會看圖片，請用文字輸入")
     )
+
+    
