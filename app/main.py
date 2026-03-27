@@ -59,7 +59,7 @@ def handle_message(event):
     group_id = event.source.group_id
     user_id = event.source.user_id
     user_text = event.message.text.strip()
-    keywords = ["熊寶", "寶貝", "鼻熊熊"]
+    keywords = ["熊寶", "寶貝", "鼻熊熊", "小熊熊", "熊寶貝"]
 
     if not any(keyword in user_text for keyword in keywords):
         line_bot_api.reply_message(
