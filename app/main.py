@@ -62,6 +62,10 @@ def handle_message(event):
     keywords = ["熊寶", "寶貝", "鼻熊熊"]
 
     if not any(keyword in user_text for keyword in keywords):
+        line_bot_api.reply_message(
+            event.reply_token, 
+            TextSendMessage(text="你沒有叫我，我不要理你～")
+        )
         return
 
     async def logic(event):
