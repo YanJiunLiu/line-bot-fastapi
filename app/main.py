@@ -6,6 +6,7 @@ from config.settings import app, LINE_CHANNEL_ACCESS_TOKEN, LINE_CHANNEL_SECRET,
 from utils.call_ollama import FinanceAnalyzer
 import random
 import asyncio
+from datetime import datetime
 
 line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
 handler = WebhookHandler(LINE_CHANNEL_SECRET)
@@ -60,6 +61,7 @@ def handle_message(event):
     user_id = event.source.user_id
     user_text = event.message.text.strip()
     keywords = ["熊寶", "寶貝", "鼻熊熊", "小熊熊", "熊寶貝"]
+    CURRENT_DATE = datetime.now().strftime("%Y-%m-%d")
 
     if not any(keyword in user_text for keyword in keywords):
         line_bot_api.reply_message(
@@ -74,7 +76,7 @@ def handle_message(event):
             event.reply_token, 
             TextSendMessage(text=_get_waiting_msg(user_id))
         )
-        result = await finance_analyzer.chat(user_id, user_text)
+        result = await finance_analyzer.chat(user_id, user_text, CURRENT_DATE)
         line_bot_api.push_message(
             group_id, 
             TextSendMessage(text=f"{result}")

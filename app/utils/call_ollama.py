@@ -4,12 +4,12 @@ from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages import SystemMessage
 from langchain_core.output_parsers import JsonOutputParser
-from datetime import datetime
+
 import json
 import uuid
 from collections import defaultdict
 
-CURRENT_DATE = datetime.now().strftime("%Y-%m-%d")
+
 
 class FinanceAnalyzer:
     def __init__(self):
@@ -32,7 +32,7 @@ class FinanceAnalyzer:
             settings.logger.warning(f"找不到檔案: {filename}, 將不使用該檔案的內容")
             return ""
 
-    async def preproccess(self, user_input: str):
+    async def preproccess(self, user_input: str, current_date: str):
         prompt = ChatPromptTemplate.from_messages([
             ("system", self.skills),
             ("human", "{input}")
@@ -42,7 +42,7 @@ class FinanceAnalyzer:
         
         try:
             result = await chain.ainvoke({
-                "today": CURRENT_DATE,
+                "today": current_date,
                 "input": user_input
             })
             settings.logger.info(f"模型解析結果: {result}")
@@ -135,8 +135,8 @@ class FinanceAnalyzer:
             return result['reply']
     
     
-    async def chat(self, user_id, user_text):
-        preproccess = await self.preproccess(user_text)
+    async def chat(self, user_id, user_text, current_date):
+        preproccess = await self.preproccess(user_text, current_date)
         settings.logger.info(f"preproccess {preproccess}")
         user_hash_key = f"user:{user_id}:records"
         if preproccess['intent'] == "create":
